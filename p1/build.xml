@@ -1,0 +1,43 @@
+<project name="p1" default="all" basedir=".">
+
+    <description>
+        Simple demo of a client and server which operate over TCP.
+    </description>
+
+    <property name="archive" location="${ant.project.name}.zip"/>
+    <property name="build" location="build"/>
+    <property name="src" location="src"/>
+
+    <target name="clean">
+        <delete dir="${build}"/>
+        <delete file="${archive}"/>
+    </target>
+
+    <target name="compile">
+        <javac sourcedir="${src}" destdir="${build}" includeAntRuntime="false"/>
+    </target>
+
+    <target name="run">
+        <java classname="Server" classpath="${build}" fork="true"/>
+        <java classname="Client" classpath="${build}">
+            <arg value=""/>
+        <java/>
+        <java classname="Client" classpath="${build}">
+            <arg value="Hello World!">
+        <java/>
+        <java classname="Client" classpath="${build}">
+            <arg value="al;sdjfaljksdgfkasdhnfkasdfasjdhfaskljdhnfaksjdhnfkasjdnhfkajsedhfkasjdfasjdhfjhasdfajsdfasjhdf;lja;ksdfja;ldsnjhfasdefjasefasdkfljasdnjflaksejfa;lksfdja;lfksdja;fsd">
+        <java/>
+    </target>
+
+    <target name="zip">
+        <zip basedir="${src}" destfile="${archive}"/>
+    </target>
+
+    <target name="all">
+        <antcall target="clean"/>
+        <antcall target="compile"/>
+        <antcall target="run"/>
+    </target>
+
+</project>
