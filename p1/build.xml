@@ -7,6 +7,7 @@
     <property name="archive" location="${ant.project.name}.zip"/>
     <property name="build" location="build"/>
     <property name="src" location="src"/>
+    <property name="test" location="test"/>
 
     <target name="clean">
         <delete dir="${build}"/>
@@ -16,19 +17,25 @@
     <target name="compile">
         <mkdir dir="${build}"/>
         <javac srcdir="${src}" destdir="${build}" includeAntRuntime="false"/>
+        <javac srcdir="${test}" destdir="${build}" includeAntRuntime="false"/>
     </target>
 
     <target name="test">
         <echo message="MAKE SURE TO START THE SERVER BEFORE RUNNING TESTS!"/>
         <sleep seconds="3"/>
         <java classname="${ant.project.name}.Client" classpath="${build}">
-            <arg value=""/>
-        </java>
-        <java classname="${ant.project.name}.Client" classpath="${build}">
             <arg value="Hello World!"/>
         </java>
         <java classname="${ant.project.name}.Client" classpath="${build}">
+            <arg value=""/>
+        </java>
+        <java classname="${ant.project.name}.Client" classpath="${build}">
             <arg value="al;sdjfaljksdgfkasdhnfkasdfasjdhfaskljdhnfaksjdhnfkasjdnhfkajsedhfkasjdfasjdhfjhasdfajsdfasjhdf;lja;ksdfja;ldsnjhfasdefjasefasdkfljasdnjflaksejfa;lksfdja;lfksdja;fsd"/>
+        </java>
+        <echo message="TESTING CLIENT THAT IMMEDIATELY DISCONNECTS"/>
+        <sleep seconds="3"/>
+        <java classname="${ant.project.name}.GlitchyClient" classpath="${build}">
+            <arg value="This should not print!"/>
         </java>
     </target>
 
