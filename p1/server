@@ -1,0 +1,3 @@
+#!/bin/bash
+cd build
+java p1.Server
