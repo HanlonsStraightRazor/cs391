@@ -11,7 +11,7 @@ import java.net.UnknownHostException;
  * and receives a string back before closing.
  * @author Martin Mueller
  */
-public class Client {
+public class GlitchyClient {
     // The host of the server to connect to (null => loopback)
     public static final String HOST = null;
     // The port over which the client connects to the server
@@ -24,8 +24,6 @@ public class Client {
     public static void main(String args[]) {
         Socket connection = connect(HOST, PORT);
         if (connection != null) {
-            sendString(connection, args[0]);
-            receiveString(connection);
             disconnect(connection);
         }
     }
