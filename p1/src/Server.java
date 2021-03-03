@@ -1,9 +1,9 @@
 package p1;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.EOFException;
 import java.io.IOException;
-import java.lang.IllegalArgumentException;
-import java.lang.SecurityException;
+import java.io.UTFDataFormatException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
@@ -18,8 +18,6 @@ import java.nio.channels.IllegalBlockingModeException;
 public class Server {
     // The port on which the server listens for connections
     public static final int LISTEN_PORT = 1234;
-    // The size of the read buffer in bytes
-    public static final int BUFFER_SIZE = 4096;
     /*
      * Returns a capitalized version of a string from a client over TCP.
      * Runs in an infinite loop.
@@ -33,12 +31,14 @@ public class Server {
                 break;
             }
             String inputString = getInput(connection);
-            if (inputString == null) {
+            if (inputString != null) {
                 sendOutput(connection, inputString.toUpperCase());
             }
             disconnect(connection);
         }
-        closeSocket(sock);
+        if (sock != null) {
+            closeSocket(sock);
+        }
     }
     /*
      * Establishes and returns a server socket on LISTEN_PORT.
@@ -94,18 +94,15 @@ public class Server {
             DataInputStream input = new DataInputStream(
                 connection.getInputStream()
             );
-            byte bytes[] = new byte[BUFFER_SIZE];
-            StringBuilder sb = new StringBuilder();
-            int bytesRead = 0;
             try {
-                while (bytesRead > -1) {
-                    bytesRead = input.read(bytes);
-                    sb.append(new String(bytes, 0, bytesRead));
-                }
+                inputString = input.readUTF();
+            } catch (EOFException eofex) {
+                System.out.println("Reached EOF before end of input");
+            } catch (UTFDataFormatException udfex) {
+                System.out.println("Invalid UTF");
             } catch (IOException ioex2) {
                 System.out.println("Cannot read input");
             }
-            inputString = sb.toString();
             System.out.println("Received string: " + inputString);
         } catch (IOException ioex) {
             System.out.println("Connection unavailable");
@@ -120,10 +117,11 @@ public class Server {
     private static void sendOutput(Socket connection, String outputString) {
         try {
             System.out.println("Sending string: " + outputString);
-            DataOutputStream outputStream = new DataOutputStream(
+            DataOutputStream output = new DataOutputStream(
                 connection.getOutputStream()
             );
-            outputStream.writeBytes(outputString);
+            output.writeUTF(outputString);
+            output.flush();
             System.out.println("Sent");
         } catch (IOException ioex) {
             System.out.println("Cannot send string");
