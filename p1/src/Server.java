@@ -34,9 +34,8 @@ public class Server {
             }
             String inputString = getInput(connection);
             if (inputString == null) {
-                break;
+                sendOutput(connection, inputString.toUpperCase());
             }
-            sendOutput(connection, inputString.toUpperCase());
             disconnect(connection);
         }
         closeSocket(sock);
