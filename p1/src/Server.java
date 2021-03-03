@@ -55,7 +55,7 @@ public class Server {
         } catch (SecurityException secex) {
             System.out.println("Permission denied");
         } catch (IllegalArgumentException illargex) {
-            System.out.println("Port number invalid");
+            System.out.println("Invalid port");
         }
         return sock;
     }
@@ -108,7 +108,7 @@ public class Server {
             inputString = sb.toString();
             System.out.println("Received string: " + inputString);
         } catch (IOException ioex) {
-            System.out.println("Socket unavailable");
+            System.out.println("Connection unavailable");
         }
         return inputString;
     }
@@ -126,7 +126,7 @@ public class Server {
             outputStream.writeBytes(outputString);
             System.out.println("Sent");
         } catch (IOException ioex) {
-            System.out.println("Cannot send output");
+            System.out.println("Cannot send string");
         }
     }
     /*
