@@ -14,20 +14,22 @@
     </target>
 
     <target name="compile">
-        <javac sourcedir="${src}" destdir="${build}" includeAntRuntime="false"/>
+        <mkdir dir="${build}"/>
+        <javac srcdir="${src}" destdir="${build}" includeAntRuntime="false"/>
     </target>
 
-    <target name="run">
-        <java classname="Server" classpath="${build}" fork="true"/>
-        <java classname="Client" classpath="${build}">
+    <target name="test">
+        <echo message="MAKE SURE TO START THE SERVER BEFORE RUNNING TESTS!"/>
+        <sleep seconds="3"/>
+        <java classname="${ant.project.name}.Client" classpath="${build}">
             <arg value=""/>
-        <java/>
-        <java classname="Client" classpath="${build}">
-            <arg value="Hello World!">
-        <java/>
-        <java classname="Client" classpath="${build}">
-            <arg value="al;sdjfaljksdgfkasdhnfkasdfasjdhfaskljdhnfaksjdhnfkasjdnhfkajsedhfkasjdfasjdhfjhasdfajsdfasjhdf;lja;ksdfja;ldsnjhfasdefjasefasdkfljasdnjflaksejfa;lksfdja;lfksdja;fsd">
-        <java/>
+        </java>
+        <java classname="${ant.project.name}.Client" classpath="${build}">
+            <arg value="Hello World!"/>
+        </java>
+        <java classname="${ant.project.name}.Client" classpath="${build}">
+            <arg value="al;sdjfaljksdgfkasdhnfkasdfasjdhfaskljdhnfaksjdhnfkasjdnhfkajsedhfkasjdfasjdhfjhasdfajsdfasjhdf;lja;ksdfja;ldsnjhfasdefjasefasdkfljasdnjflaksejfa;lksfdja;lfksdja;fsd"/>
+        </java>
     </target>
 
     <target name="zip">
@@ -37,7 +39,6 @@
     <target name="all">
         <antcall target="clean"/>
         <antcall target="compile"/>
-        <antcall target="run"/>
     </target>
 
 </project>
