@@ -26,6 +26,12 @@
         <zip basedir="${src}" destfile="${archive}"/>
     </target>
 
+    <target name="TAGS">
+        <exec executable="ctags" searchpath="true">
+            <arg line="-R ${src}"/>
+        </exec>
+    </target>
+
     <target name="all">
         <antcall target="clean"/>
         <antcall target="compile"/>
