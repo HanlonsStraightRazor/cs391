@@ -14,7 +14,10 @@
 
     <target name="compile">
         <mkdir dir="${build}"/>
-        <javac srcdir="${src}" destdir="${build}"/>
+        <javac srcdir="${src}"
+            destdir="${build}"
+            includeantruntime="false"
+            debug="on"/>
     </target>
 
     <target name="dist">
