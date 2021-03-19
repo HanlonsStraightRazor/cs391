@@ -3,6 +3,7 @@ package p2;
 import java.io.*;
 import java.net.*;
 import java.nio.channels.IllegalBlockingModeException;
+import java.util.ArrayList;
 import java.util.Scanner;
 
 /*
@@ -28,16 +29,14 @@ public class DNSClient {
         for (;;) {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             DataOutputStream dos = new DataOutputStream(baos);
-            if (!(writeHeader(dos)
+            if (writeHeader(dos)
                     && writeQuestion(sock, dos)
-                    && sendRequest(sock, address, baos))) {
-                continue;
+                    && sendRequest(sock, address, baos)) {
+                byte[] response = getResponse(sock);
+                if (response != null) {
+                    parseResponse(response);
+                }
             }
-            byte[] response = getResponse(sock);
-            if (response == null) {
-                continue;
-            }
-            parseResponse(response);
         }
     }
     /*
@@ -89,7 +88,6 @@ public class DNSClient {
      */
     public static boolean writeHeader(DataOutputStream dos) {
         try {
-            System.out.print("Writing header...");
             // ID      = (see above)   <-- Unique ID; Must be this for project
             dos.writeShort(ID);
             // QR      = 0             <-- Query or Response
@@ -124,12 +122,13 @@ public class DNSClient {
      */
     public static boolean writeQuestion(DatagramSocket sock,
             DataOutputStream dos) {
+        System.out.print("Enter host: ");
         try {
             Scanner s = new Scanner(System.in);
-            System.out.print("Enter host: ");
             String input = s.nextLine();
             if (input.equals("quit!")) {
                 closeSocket(sock);
+                System.out.println("Done. Normal Termination.");
                 System.exit(0);
             }
             String[] hosts = input.split("\\.");
@@ -215,24 +214,231 @@ public class DNSClient {
     }
     /*
      * Outputs a DNS response packet in a human readable format.
+     * @param response The DNS response in the form of a byte array
      */
     public static void parseResponse(byte[] response) {
         try {
             DataInputStream dis = new DataInputStream(
                 new ByteArrayInputStream(response)
             );
-            System.out.printf("ID: 0x%x\n", dis.readShort());
-            short flags = dis.readShort();
-            System.out.printf("Flags: 0x%x\n", flags);
-            System.out.printf("Questions: %d\n", dis.readShort());
-            System.out.printf("Answers: %d\n", dis.readShort());
-            System.out.printf("Additional Name Servers: %d\n", dis.readShort());
-            System.out.printf("Additional Records: %d\n", dis.readShort());
-        } catch (EOFException eofex) {
-            System.err.println("Reached end of response before parsing finished");
+            // Keep log of bytes read
+            ArrayList<Byte> log = new ArrayList<>();
+            // Header information
+            System.out.printf("Transaction ID: 0x%04X\n", getShort(log, dis));
+            short flags = getShort(log, dis);
+            System.out.printf("Flags: 0x%04X\n", flags);
+            System.out.printf("Questions: 0x%04X\n", getShort(log, dis));
+            short answers = getShort(log, dis);
+            System.out.printf("Answers RRs: 0x%04X\n", answers);
+            System.out.printf("Name Server RRs: 0x%04X\n", getShort(log, dis));
+            System.out.printf("Additional RRs: 0x%04X\n", getShort(log, dis));
+            System.out.println();
+            // Question information
+            System.out.printf("Name: %s\n", readName(log, dis));
+            System.out.printf("Type: 0x%04X\n", getShort(log, dis));
+            System.out.printf("Class: 0x%04X\n", getShort(log, dis));
+            System.out.println();
+            // Response information
+            // Iterate over answers
+            for (int s = 0; s < answers; s++) {
+                System.out.printf("Name: %s\n", readName(log, dis));
+                short type = getShort(log, dis);
+                System.out.printf("Type: 0x%04X\n", type);
+                System.out.printf("Class: 0x%04X\n", getShort(log, dis));
+                System.out.printf("TTL: %d\n", getInt(log, dis));
+                System.out.printf("Length: %d\n", getShort(log, dis) & 0xffff);
+                if (type == 1) { // A record
+                    System.out.printf("Value: %d.%d.%d.%d\n",
+                            getByte(log, dis) & 0xff,
+                            getByte(log, dis) & 0xff,
+                            getByte(log, dis) & 0xff,
+                            getByte(log, dis) & 0xff);
+                } else if (type == 5) { // CNAME
+                    System.out.printf("Value: %s\n", readName(log, dis));
+                } else { // Something this can't parse
+                    System.err.println("Error: sorry, I can't parse that type");
+                }
+                System.out.println();
+            }
+            // Error checking
+            int recursionAvailable = (flags >> 7) & 1;
+            if (recursionAvailable == 0) {
+                System.err.println("Error: Recursion not available");
+            }
+            int responseCode = flags & 15;
+            switch (responseCode) {
+                case (0):
+                    break;
+                case (1):
+                    System.err.println("Error: Erroneous query format");
+                    break;
+                case (2):
+                    System.err.println("Error: Server unable to process query");
+                    break;
+                case (3):
+                    System.err.println("Error: Name unavailable");
+                    break;
+                case (4):
+                    System.err.println(
+                            "Error: Requested query type not supported");
+                    break;
+                case (5):
+                    System.err.println("Error: Query refused");
+                    break;
+                default:
+                    System.err.println("Error: Invalid response code");
+            }
         } catch (IOException ioex) {
-            System.err.println("Input stream closed unexpectedly");
+            System.err.println("Error: Erroneous response format");
+        } finally {
+            System.out.println();
         }
+    }
+    /*
+     * Adds the next byte from the stream to a log.
+     * @param log The log which keeps track of previously read bytes
+     * @param dis The stream from which to read
+     * @return The byte that was read
+     */
+    public static byte getByte(ArrayList<Byte> log, DataInputStream dis)
+            throws IOException {
+        byte a = 0;
+        try {
+            a = dis.readByte();
+            log.add(a);
+        } catch (IOException ioex) {
+            throw ioex;
+        }
+        return a;
+    }
+    /*
+     * Adds the next 2 bytes from the stream to a log.
+     * @param log The log which keeps track of previously read bytes
+     * @param dis The stream from which to read
+     * @return The 2 bytes that were read
+     */
+    public static short getShort(ArrayList<Byte> log, DataInputStream dis)
+            throws IOException {
+        byte a = 0, b = 0;
+        try {
+            a = dis.readByte();
+            log.add(a);
+            b = dis.readByte();
+            log.add(b);
+        } catch (IOException ioex) {
+            throw ioex;
+        }
+        return (short) ((a << 8) | b);
+    }
+    /*
+     * Adds the next 4 bytes from the stream to a log.
+     * @param log The log which keeps track of previously read bytes
+     * @param dis The stream from which to read
+     * @return The 4 bytes that were read
+     */
+    public static int getInt(ArrayList<Byte> log, DataInputStream dis)
+            throws IOException {
+        byte a = 0, b = 0, c = 0, d = 0;
+        try {
+            a = dis.readByte();
+            log.add(a);
+            b = dis.readByte();
+            log.add(b);
+            c = dis.readByte();
+            log.add(c);
+            d = dis.readByte();
+            log.add(d);
+        } catch (IOException ioex) {
+            throw ioex;
+        }
+        return (a << 24)
+            | (b << 16)
+            | (c << 8)
+            | d;
+    }
+    /*
+     * Reads a string with respect to pointers from a DNS response.
+     * @param log The log to whicht to write previously read data
+     * @param dis The stream from which to read
+     * @return The string read from the DNS response
+     */
+    public static String readName(ArrayList<Byte> log, DataInputStream dis)
+            throws IOException {
+        String string = null;
+        try {
+            // Build name as we go
+            StringBuilder name = new StringBuilder();
+            // Read while there's no null byte
+            byte b = getByte(log, dis);
+            for (;;) {
+                // Determine if we're reading a pointer
+                if (((b >> 6) & 3) == 3) {
+                    // Calculate offset
+                    int offset = b << 8;
+                    b = getByte(log, dis);
+                    offset = (offset | b) & 0x3fff;
+                    // Get string from pointer
+                    name.append(readPointer(log, offset));
+                    // Since pointers can only be at the end, stop
+                    break;
+                } else {
+                    // If there's no pointer, read like normal
+                    byte count = b;
+                    for (byte chars = 0; chars < count; chars++) {
+                        b = getByte(log, dis);
+                        byte[] array = { b };
+                        name.append(new String(array));
+                    }
+                    b = getByte(log, dis);
+                    // Stop if we hit a null byte
+                    if (b == 0) {
+                        break;
+                    }
+                }
+                // Append dot separator
+                name.append(".");
+            }
+            string = name.toString();
+        } catch (IOException ioex) {
+            throw ioex;
+        }
+        return string;
+    }
+    /*
+     * Takes a log of parsed bytes and a pointer and returns
+     * the result of dereferencing the pointer as a string.
+     * @param log The bytes read so far
+     * @param offset The offset of the pointer relative to the log
+     * @return The string to which the pointer points
+     */
+    public static String readPointer(ArrayList<Byte> log, int offset) {
+        StringBuilder name = new StringBuilder();
+        byte b = log.get(offset);
+        for (;;) {
+            if (((b >> 6) & 3) == 3) {
+                int os = b << 8;
+                offset++;
+                b = log.get(offset);
+                os = (os | b) & 0x3fff;
+                name.append(readPointer(log, os));
+                break;
+            } else {
+                byte count = b;
+                for (byte chars = 0; chars < count; chars++) {
+                    offset++;
+                    b = log.get(offset);
+                    byte[] array = { b };
+                    name.append(new String(array));
+                }
+                offset++;
+                b = log.get(offset);
+                if (b == 0) {
+                    break;
+                }
+            }
+            name.append(".");
+        }
+        return name.toString();
     }
     /*
      * Closes a given DatagramSocket.
