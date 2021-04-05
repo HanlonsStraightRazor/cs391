@@ -27,11 +27,6 @@
         <delete file="${dist}"/>
     </target>
 
-    <target name="run">
-        <!-- <java classpath="${build}" classname="${ant.project.name}.DNSClient"/> -->
-    </target>
-
-
     <target name="TAGS">
         <exec executable="ctags" searchpath="true">
             <arg line="-R ${src}"/>
@@ -41,7 +36,6 @@
     <target name="all">
         <antcall target="clean"/>
         <antcall target="compile"/>
-        <antcall target="run"/>
     </target>
 
 </project>
