@@ -72,12 +72,42 @@ public class Server {
     /**
      * Receives an incoming DatagramPacket through a given DatagramSocket. This method should
      * block until a DatagramPacket is received.
+     *
+     * This uses two checksums to pinpoint and correct a single bit flip error.
+     * Error detection starts by computing one checksum. If an error is
+     * detected, the second checksum is used to find the byte where the error
+     * occured and flips the corresponding bit by using the actual and given
+     * checksums.
+     *
      * @param inPkt The DatagramPacket into which the incoming DatagramPacket is received.
      * @param inSocket The DatagramSocket through which a DatagramPacket is received.
      * @throws IOException is thrown if receive fails.
      */
     private static boolean receivePacket(DatagramPacket inPkt, DatagramSocket inSocket) throws IOException {
+        System.out.println();
+        // Receive packet
         inSocket.receive(inPkt);
+        // Perform error detection
+        byte[] buffer = inPkt.getData();
+        int parity = 0;
+        for (int i = 0; i < buffer.length - 2; i++) {
+            parity ^= buffer[i];
+        }
+        int checksum = buffer[buffer.length - 2];
+        if (parity != checksum) {
+            // Perform error recovery
+            for (int i = 0; i < buffer.length - 2; i++) {
+                int checkbit = 0;
+                for (int j = 0; j < Byte.SIZE; j++) {
+                    checkbit ^= (buffer[i] >> j) & 1;
+                }
+                if (checkbit != ((buffer[buffer.length - 1] >> i) & 1)) {
+                    buffer[i] = (byte) (parity ^ checksum ^ buffer[i]);
+                    inPkt.setData(buffer, 0, buffer.length);
+                    break;
+                }
+            }
+        }
         return true;
     }
 
