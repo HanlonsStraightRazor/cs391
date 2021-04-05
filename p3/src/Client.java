@@ -77,6 +77,9 @@ public class Client {
      * Fill in the missing details. Give a justification for the error
      * recovery scheme being used here.
      *
+     * Since I am not able to modify the main method, I just throw a timeout
+     * exception if I get an invalid response from the server.
+     * That will cause the packet to be resent.
      *
      * @param inSocket The DatagramSocket through which a response from the Server
      *                 is expected.
@@ -94,17 +97,24 @@ public class Client {
                                   // SocketTimeoutException is thrown
         if ((rcvData[0] & Server.LOW) == Server.LOW) {
             return Server.LOW;
-        }
-        if ((rcvData[0] & Server.HIGH) == Server.HIGH) {
+        } else if ((rcvData[0] & Server.HIGH) == Server.HIGH) {
             return Server.HIGH;
-        }
-        //if ((rcvData[0] & Server.WINNER) == Server.WINNER) {
+        } else if ((rcvData[0] & Server.WINNER) == Server.WINNER) {
             return Server.WINNER;
-        //}
+        } else {
+            // Timeout if erroneous status code was sent
+            throw new SocketTimeoutException();
+        }
     }
 
     /**
      * Sends a given guess to a given InetAddress address through the given DatagramSocket.
+     *
+     * Two checksums are sent with each guess. If the bits representing the long
+     * were to be written as an 8x8 table, one checksum would be from the top
+     * down, and another would be from left to right. This allows the server to
+     * use both checksums to pinpoint and correct a single bit flip error.
+     *
      * @param guess The guess that the Client is sending to the Server.
      * @param inSocket The DatagramSocket through which the guess must be sent.
      * @param serverAddr The InetAddress to which the given guess should be sent.
@@ -118,6 +128,16 @@ public class Client {
         DataOutputStream dos = new DataOutputStream(baos);
         // Write guess
         dos.writeLong(guess);
+        // Write error detection and recovery bits
+        int parity = 0;
+        for (int i = 0; i < Long.SIZE / Byte.SIZE; i++) {
+            int b = ((int) (guess >> (i * Byte.SIZE))) & 255;
+            parity ^= b << Byte.SIZE; // detection
+            for (int j = 0; j < Byte.SIZE; j++) {
+                parity ^= ((b >> j) & 1) << i; // recovery
+            }
+        }
+        dos.writeShort((short) parity);
         byte[] sndData = baos.toByteArray();
         DatagramPacket sndPkt = new DatagramPacket(sndData,
                                                    sndData.length,
