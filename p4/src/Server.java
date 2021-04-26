@@ -1,3 +1,5 @@
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -67,39 +69,68 @@ public class Server {
         }
     }
 
-    //private static int expSeqNum = ;
+    private static int expSeqNum = 0;
 
     /*
-     * Give comment blocks for ALL of the following methods...
+     * If the expected sequence number is 0, makes it 1.
+     * If the expected sequence number is 1, makes it 0.
      */
-
-
     private static void updateSeqNum() {
-        // You can modify only the code inside this method
+        expSeqNum ^= 1;
     }
 
+    /*
+     * Attaches an ACK header and a checksum to a packet.
+     * @param inPkt The packet to send to the Client
+     */
     private static void makeAckPktOK(DatagramPacket inAckPkt) {
-        // You can modify only the code inside this method
+        byte[] array = inAckPkt.getData();
+        array[0] = (byte) expSeqNum;
+        array[2] = (byte) (array[0] ^ array[1]);
     }
 
+    /*
+     * Attaches a NACK header to a packet.
+     * @param inPkt The packet to send to the Client
+     */
     private static void makeAckPktNotOK(DatagramPacket inAckPkt) {
-        // You can modify only the code inside this method
+        inAckPkt.getData()[0] = (byte) expSeqNum;
     }
 
+    /*
+     * Extracts the numerical guess from a packet sent from the Client.
+     * @param data The raw packet from the Client
+     * @return The Client's guess
+     * @exception IOException If the packet is the incorrect size
+     */
     private static long extractGuess(byte[] data) throws IOException {
-        // You can modify only the code inside this method
-        return 0;
+        DataInputStream stream = new DataInputStream(
+            new ByteArrayInputStream(data, 1, Long.BYTES)
+        );
+        return stream.readLong();
     }
 
+    /*
+     * Determines if a response packet from
+     * the Client has an unexpected sequence number.
+     * @param inPkt The packet received from the Client
+     * @return Whether the packet's sequence number is expected
+     */
     private static boolean packetHasWrongSeqNum(DatagramPacket inPkt) {
-        // You can modify only the code inside this method
-        return false;
+        return inPkt.getData()[0] == ((byte) expSeqNum) ? true : false;
     }
 
+    /*
+     * Whether a packet from the Client has a
+     * checksum matching the one computed on this end.
+     * @param inPkt The packet received from the Client
+     * @return Whether the received packet is corrupt
+     */
     private static boolean packetCorrupt(DatagramPacket inPkt) {
-        // You can modify only the code inside this method
-        return false;
+        byte checksum = 0;
+        for (int i = 0; i < MSS - 1; i++) {
+            checksum = (byte) (checksum ^ inPkt.getData()[i]);
+        }
+        return inPkt.getData()[MSS - 1] == checksum ? true : false;
     }
-
-    // You may add extra methods...
 }
