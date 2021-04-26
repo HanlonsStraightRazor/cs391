@@ -70,16 +70,23 @@ public class Client {
         }
     }
 
-    //private static int expSeqNum = ;
+    private static int expSeqNum = 0;
 
     /*
-     * Give comment blocks for all of the following methods...
+     * Sends a guess to the Server and returns its response.
+     * If the received response is wrong,
+     * it resends the packet and tries again.
+     * @param sndPkt The packet to send to the Server
+     * @param dgSocket The socket over which to send the packet
+     * @exception IOException If there is an error with the socket
+     * @return The response from the Server if the packet is good
      */
-
     private static byte sendGuessAndGetResponse(DatagramPacket sndPkt,
                                                 DatagramSocket dgSocket) throws IOException {
         // Add code to implement the alternating-bit protocol -- only add code
         DatagramPacket rcvPkt = new DatagramPacket(new byte[Server.ACK_SIZE], Server.ACK_SIZE);
+        sndPkt.getData()[0] = (byte) expSeqNum;
+        sndPkt.getData()[9] = checkSum(sndPkt.getData(), 9);
         boolean sent = false;
         while (!sent) {
             System.out.print("CLIENT Sending guess...");
@@ -88,17 +95,33 @@ public class Client {
             System.out.print("CLIENT Waiting for response...");
             dgSocket.receive(rcvPkt);
             System.out.print("got it, ");
+            if (rcvPkt.getData()[2] != checkSum(rcvPkt.getData(), 2)) {
+                System.err.println("corrupt");
+                continue;
+            }
+            if (rcvPkt.getData()[0] != expSeqNum) {
+                System.err.println("wrong sequence number");
+                continue;
+            }
             sent = true;
         }
+        expSeqNum ^= 1;
         return rcvPkt.getData()[1];
     }
 
+    /*
+     * Compute the XOR checksum of a given
+     * byte array over a specific length.
+     * @param data The data for which to generate the checksum
+     * @param len The length of the data field
+     * @return The XOR checksum
+     */
     // You fill in the missing details -- compute the XOR checksum
     public static byte checkSum(byte[] data, int len) {
         byte cs = 0;
-
+        for (int i = 0; i < len; i++) {
+            cs ^= data[i];
+        }
         return cs;
     }
-
-
 }
