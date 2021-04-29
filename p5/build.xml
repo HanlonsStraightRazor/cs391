@@ -1,0 +1,42 @@
+<project name="p5" default="all" basedir=".">
+
+    <description>
+        A proprietary P2P instant messenger that runs on top of UDP.
+    </description>
+
+    <property name="build" location="build"/>
+    <property name="dist" location="${ant.project.name}.zip"/>
+    <property name="src" location="src"/>
+
+    <target name="clean">
+        <delete dir="${build}"/>
+    </target>
+
+    <target name="compile">
+        <mkdir dir="${build}"/>
+        <javac srcdir="${src}"
+            destdir="${build}"
+            includeantruntime="false"
+            debug="on"/>
+    </target>
+
+    <target name="dist">
+        <zip basedir="${src}" destfile="${dist}"/>
+    </target>
+
+    <target name="distclean" depends="clean">
+        <delete file="${dist}"/>
+    </target>
+
+    <target name="tags">
+        <exec executable="ctags" searchpath="true">
+            <arg line="-R ${src}"/>
+        </exec>
+    </target>
+
+    <target name="all">
+        <antcall target="clean"/>
+        <antcall target="compile"/>
+    </target>
+
+</project>
