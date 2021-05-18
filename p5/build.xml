@@ -10,6 +10,7 @@
 
     <target name="clean">
         <delete dir="${build}"/>
+        <delete file="P5.LOG"/>
     </target>
 
     <target name="compile">
