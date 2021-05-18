@@ -13,7 +13,7 @@ public class Message {
 
     // Message Types
     public static final byte MSG_PEER_COMING_UP   = 1;
-    public static final byte MSG_PEER_COMING_DOWN = 2;
+    public static final byte MSG_PEER_GOING_DOWN  = 2;
     public static final byte MSG_MESSAGE_TO_PEER  = 3;
     public static final byte MSG_PEER_UP_DATA     = 4;
     public static final byte MSG_PEER_DOWN_DATA   = 5;
@@ -55,10 +55,22 @@ public class Message {
      */
     public static DatagramPacket peerGoingDownMessage()
             throws UnknownHostException, IOException {
-
-        // Use ByteArrayOutputStream and DataOutputStream
-        // Fill in the missing details
-        return null;
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        DataOutputStream dos = new DataOutputStream(baos);
+        dos.writeByte(MSG_PEER_GOING_DOWN);
+        byte[] data = baos.toByteArray();
+        InetAddress addr = null;
+        if (TRACKER_ADDRESS.toLowerCase().equals("localhost")) {
+            addr = InetAddress.getLoopbackAddress();
+        } else {
+            addr = InetAddress.getByName(TRACKER_ADDRESS);
+        }
+        DatagramPacket dgp = new DatagramPacket(
+            data,
+            data.length,
+            addr,TRACKER_SERVER_PORT_NUM
+        );
+        return dgp;
     }
 
     /*
@@ -69,24 +81,58 @@ public class Message {
      */
     public static DatagramPacket ackResponse(DatagramPacket receivePacket)
             throws UnknownHostException, IOException {
-
-        // Use ByteArrayOutputStream and DataOutputStream
-        // Fill in missing details
-        return null;
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        DataOutputStream dos = new DataOutputStream(baos);
+        dos.writeByte(MSG_ACK);
+        byte[] data = baos.toByteArray();
+        InetAddress addr = null;
+        if (TRACKER_ADDRESS.toLowerCase().equals("localhost")) {
+            addr = InetAddress.getLoopbackAddress();
+        } else {
+            addr = InetAddress.getByName(TRACKER_ADDRESS);
+        }
+        DatagramPacket dgp = new DatagramPacket(
+            data,
+            data.length,
+            addr,TRACKER_SERVER_PORT_NUM
+        );
+        return dgp;
     }
 
     /*
-     * Create a message to another Peer.
+     * Create a packet array containing a message.
      *
      * @param peer The Peer to which to send the message
-     * @param msg The message to send to the Peer
-     * @return The packet containing the message for the other Peer
+     * @param msg The message to send
+     * @return The packet(s) containing the message
      */
     public static DatagramPacket[] messageToPeer(Peer peer, String msg)
             throws UnknownHostException, IOException {
-
-        // Use ByteArrayOutputStream and DataOutputStream
-        // Fill in missing details
-        return null;
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        DataOutputStream dos = new DataOutputStream(baos);
+        dos.writeByte(MSG_MESSAGE_TO_PEER);
+        if (msg.length() > MAX_MSG_SIZE - USER_NAME.length() - 3) {
+            dos.writeBytes(
+                peer.toString()
+                + msg.substring(0, MAX_MSG_SIZE - USER_NAME.length() - 2)
+            );
+        } else {
+            dos.writeBytes(peer.toString() + msg);
+        }
+        byte[] data = baos.toByteArray();
+        InetAddress addr = null;
+        if (TRACKER_ADDRESS.toLowerCase().equals("localhost")) {
+            addr = InetAddress.getLoopbackAddress();
+        } else {
+            addr = InetAddress.getByName(TRACKER_ADDRESS);
+        }
+        DatagramPacket dgp = new DatagramPacket(
+            data,
+            data.length,
+            addr,TRACKER_SERVER_PORT_NUM
+        );
+        DatagramPacket[] packets = new DatagramPacket[1];
+        packets[0] = dgp;
+        return packets;
     }
 }
