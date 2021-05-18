@@ -9,19 +9,24 @@ public class Client extends JFrame {
     private DatagramSocket clientSocket;
     private ServerTask serverTask;
 
+    /*
+     * Constructor.
+     * Initialize graphical components and starts background server.
+     */
     public Client() {
         initComponents();
-
-
-
-
-
-
-
-
-
+        try {
+            serverTask = new ServerTask(lstPeers, txtRcvMsg);
+            new Thread(serverTask).start();
+            clientSocket = new DatagramSocket();
+        } catch (Exception e) {
+            System.out.println(e);
+        }
     }
 
+    /*
+     * Initialize graphical components.
+     */
     private void initComponents() {
 
         jScrollPane1 = new javax.swing.JScrollPane();
@@ -110,43 +115,34 @@ public class Client extends JFrame {
         pack();
     }
 
+    /*
+     * If a Peer is selected, send a message to that Peer.
+     * Else, print an error.
+     *
+     * @param evt The event that triggered the message to be sent
+     */
     private void btnSendActionPerformed(java.awt.event.ActionEvent evt) {
         try {
-
-
-
-
-
-
-
-
-
-
-
-
+            DatagramPacket[] packets = Message.messageToPeer(
+                lstPeers.getSelectedValue(),
+                Message.USER_NAME + ": " + txtMessage.getText()
+            );
+            for (DatagramPacket packet : packets) {
+                clientSocket.send(packet);
+            }
         } catch (Exception ex) {
             System.out.println("Client Failed to Send Message.");
             System.out.println("Client Exception: " + ex.toString());
         }
     }
 
+    /*
+     * Gracefully close the server on shut down.
+     *
+     * @param evt The window event that triggered the shut down
+     */
     private void closingDown(java.awt.event.WindowEvent evt) {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        serverTask.closeDown();
     }
 
     /**
