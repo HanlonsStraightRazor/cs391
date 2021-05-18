@@ -1,5 +1,5 @@
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -24,9 +24,20 @@ public class Peer {
      */
     public Peer(byte[] msgBytes, int length)
             throws UnknownHostException, IOException {
-        // Use a ByteArrayOutputStream
-        // Use a DataInputStream
-        // Use static InetAddress method getByAddress.
+        ByteArrayInputStream bais = new ByteArrayInputStream(msgBytes);
+        DataInputStream dis = new DataInputStream(bais);
+        dis.skipBytes(1);
+        byte[] addr = new byte[INET_ADDR_LEN];
+        for (int i = 0; i < INET_ADDR_LEN; i++) {
+            addr[i] = dis.readByte();
+        }
+        address = InetAddress.getByAddress(addr);
+        port = dis.readInt();
+        byte[] name = new byte[length - 9];
+        for (byte b : name) {
+            b = dis.readByte();
+        }
+        userName = new String(name);
     }
 
     /*
