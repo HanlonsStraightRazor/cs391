@@ -1,5 +1,8 @@
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
 import java.io.IOException;
 import java.net.DatagramSocket;
+import java.net.DatagramPacket;
 import javax.swing.JList;
 import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
@@ -14,7 +17,7 @@ public class ServerTask implements Runnable {
 
     /*
      * Constructor for ServerTask.
-     *
+     * TODO: Finish comment block
      * @param inLstPeers
      * @param inTxtRcvMsg
      */
@@ -49,7 +52,8 @@ public class ServerTask implements Runnable {
     public void sendComingUpMessage() {
         try {
             System.out.println("Server: Going to try to send I'm up.");
-            // Fill in missing details
+            dgs.send(Message.peerComingUpMessage());
+            System.out.println("Server: Sent coming up message.");
         } catch (Exception ex) {
             System.out.println("Server Failed to send I'm up.");
             System.out.println("Server Exception: " + ex);
@@ -63,9 +67,9 @@ public class ServerTask implements Runnable {
     public void closeDown() {
         try {
             System.out.println("Server: Going to try to send I'm down.");
-            // Fill in missing details
+            dgs.send(Message.peerGoingDownMessage());
             System.out.println("Server: Sent going down message.");
-            // Fill in missing details
+            dgs.close();
         } catch (Exception ex) {
             System.out.println("Server Failed to send I'm down");
             System.out.println("Server Exception: " + ex);
@@ -74,6 +78,46 @@ public class ServerTask implements Runnable {
 
     @Override
     public void run() {
-        // Fill in missing details
+        sendComingUpMessage();
+        try {
+            while (true) {
+                byte[] buffer = new byte[Message.MAX_MSG_SIZE];
+                DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
+                dgs.receive(packet);
+                byte[] bytes = new byte[packet.getLength()];
+                for (int i = 0; i < bytes.length; i++) {
+                    bytes[i] = buffer[i];
+                }
+                switch (bytes[0]) {
+                    case Message.MSG_MESSAGE_TO_PEER:
+                        dgs.send(Message.ackResponse(packet));
+                        byte[] msg = new byte[bytes.length - 1];;
+                        for (int i = 0; i < msg.length; i++) {
+                            msg[i] = bytes[i + 1];
+                        }
+                        txtRcvMsg.append(new String(msg));
+                        break;
+                    case Message.MSG_PEER_UP_DATA:
+                        Peer p = new Peer(bytes, bytes.length);
+                        if (!peerArrayList.contains(p)) {
+                            peerArrayList.add(p);
+                            updatePeerList();
+                        }
+                        break;
+                    case Message.MSG_PEER_DOWN_DATA:
+                        Peer q = new Peer(bytes, bytes.length);
+                        if (peerArrayList.contains(q)) {
+                            peerArrayList.remove(q);
+                            updatePeerList();
+                        }
+                        break;
+                    case Message.MSG_ARE_YOU_UP:
+                        dgs.send(Message.ackResponse(packet));
+                        break;
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }
